@@ -1,0 +1,40 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment & Secrets
+.env
+.env.*
+*.local
+*.secret
+**/secrets/
+
+# API keys (patterns to catch accidental commits)
+**/api_key*
+**/apikey*
+**/*credentials*
+
+# Build artifacts (if harness/tooling grows)
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
