@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+amount="$1"
+
+if [[ $amount -gt 0 ]]; then
+    list=$(ls -1 *.md | sort -r)
+else
+    list=$(ls -1 *.md)
+fi
+
+for f in $list; do
+    old_num="$(echo "${f}" | cut -d'_' -f1)"
+    # Assumes no additional "_"
+    rest_of_name="$(echo "${f}" | cut -d'_' -f2)"
+    new_num="$((10#$old_num + amount))"
+    new_name="$(printf '%04d' ${new_num})_${rest_of_name}"
+    mv "${f}" "${new_name}"
+done

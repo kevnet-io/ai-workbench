@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+output_dir="./$1"
+
+if [ ! -d "${output_dir}" ]; then
+    mkdir "${output_dir}"
+fi
+
+cd "${output_dir}"
+
+
+dev_null_sha256="$(sha256 </dev/null)"
+
+turn_number=1
+init_turn_number() {
+    # shellcheck disable=SC2012
+    # shellcheck disable=SC2035
+    maybe_turn="$( (ls -1 *.md | sort | tail -1 | cut -d'_' -f1) || true)"
+    if [ -n "${maybe_turn}" ]; then
+        turn_number=$((10#$maybe_turn + 1))
+    fi
+    echo "Starting at turn ${turn_number}"
+}
+
+
+
+pbclear() {
+    pbcopy </dev/null
+    echo "pbclear"
+}
+
+pb_and_handle() {
+    pb_data="$(pbpaste)"
+    pb_data_sha256="$(sha256 <<< "${pb_data}")"
+
+    if [[ "${pb_data_sha256}" == "${dev_null_sha256}" ]]; then
+        printf "."
+        return 0
+    fi
+    echo
+
+    if [[ "${pb_data}" == "" ]]; then
+        echo "MISFIRE"
+        pbclear
+        return 0
+    fi
+
+    if rg --files | rg "${pb_data_sha256}"; then
+        pbclear
+        return 0
+    fi
+
+    output_file="$(printf "%04d" "${turn_number}")_${pb_data_sha256}.md"
+    # Is this robust?
+    echo "${pb_data}" > "${output_file}"
+    echo "${output_file} - Saved"
+
+    turn_number=$((turn_number + 1))
+    pbclear
+}
+
+init_turn_number
+pbclear
+while :; do
+    pb_and_handle
+    sleep 1
+done
