@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v2.10
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - traefik-net
+
+  ipallowlist:
+    build: .
+    environment:
+      # Configure your allowed IPs/CIDRs here
+      - ALLOWED_IPS=192.168.1.0/24,10.0.0.0/8,127.0.0.1
+      - PORT=8080
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.ipallowlist.loadbalancer.server.port=8080"
+
+      # ForwardAuth middleware configuration
+      - "traefik.http.middlewares.ip-allowlist.forwardauth.address=http://ipallowlist:8080"
+      - "traefik.http.middlewares.ip-allowlist.forwardauth.trustForwardHeader=true"
+    networks:
+      - traefik-net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  # Example protected application
+  whoami:
+    image: traefik/whoami
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
+      - "traefik.http.routers.whoami.entrypoints=web"
+
+      # Apply the IP allowlist middleware
+      - "traefik.http.routers.whoami.middlewares=ip-allowlist@docker"
+    networks:
+      - traefik-net
+
+networks:
+  traefik-net:
+    driver: bridge
